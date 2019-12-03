@@ -53,24 +53,27 @@ main()
 			cp s*01*.nii.gz t2sag.nii.gz
 		fi
 
-		# Resampling to 0.5 isotropic voxel
+		# Resampling t2sag to 0.5 isotropic voxel
 		if [  ! -f t2sag_resample.nii.gz ];then
 			$PATH_SCT/sct_resample -i t2sag.nii.gz -mm 0.5x0.5x0.5 -o t2sag_resample.nii.gz
 		fi
 
+		# Create dicom folder
 		if [  ! -d ${SUB}_dicom ];then
 			mkdir ${SUB}_dicom
 		fi
 
-		# Convert resampled t2sag from nifti to dicom
+		# Convert resampled 0.5 mm isotropic t2sag from nifti to dicom
 		if [  ! -f ${SUB}_dicom/${SUB}_0001.dcm ];then
 			nifti2dicom -# 4 -s .dcm -p ${SUB}_ -o dicom/ -i t2sag_resample.nii.gz -y
 		fi
 
+		# SC segmentation of original t2sag
 		if [  ! -f t2sag_seg.nii.gz ];then
 			$PATH_SCT/sct_deepseg_sc -i t2sag.nii.gz -c t2 -qc $DATA_DIR/qc -v 0
 		fi
 
+		# SC segmentation of resampled 0.5 mm isotropic t2sag
 		if [  ! -f t2sag_resample_seg.nii.gz ];then
 			$PATH_SCT/sct_deepseg_sc -i t2sag_resample.nii.gz -c t2 -qc $DATA_DIR/qc -v 0
 		fi
@@ -80,6 +83,7 @@ main()
 		fi
 
 
+		# Segmentation of t2sag resampled image (send from Tomas from SPM SW) and masking od spectroscopic voxel by this segmentation
 		if [  ! -f $DATA_DIR/resampled_masks/$SUB/sid-0001-00001-000001_seg.nii ];then
 			cd $DATA_DIR/resampled_masks/$SUB
 			$PATH_SCT/sct_deepseg_sc -i sid-0001-00001-000001.nii -c t2 -v 0
