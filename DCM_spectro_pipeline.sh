@@ -1,12 +1,15 @@
 # Script for calculation SC and CSF fraction of spectroscopic voxel
-# Script performes:
+# Script can performe:
 #		- T2SAG resampling to 0.5mm isotropic voxel and conversion to dicom
 #		- SC segmentation of original T2SAG and masking of spectroscopic voxel
 #		- SC segmentation of resampled T2SAG and masking of spectroscopic voxel
+#		- computation of SC volume from T2SAG resampled (0.5mm) in same range for all subjects, i.e., from caudal edge of C3 + 90 slices
 
 # Segmentation report is saved into qc folder (non testes and used)
 
-# JV, 17-12-2019
+# JV, 2019-2020
+
+# VER=05-01-2020
 
 
 #!/bin/bash
@@ -50,7 +53,7 @@ main()
 
 		# t2sag_resample
 
-		volume_sc_spectro_voxel
+		#volume_sc_spectro_voxel
 
 		# t2sag_resample_exclude_csf
 
@@ -58,6 +61,8 @@ main()
 
 	done
 
+
+	volume_sc_C3
 
 	# Reg to template
 	# Do labeling (neccesary for registration)
@@ -126,7 +131,31 @@ t2sag_resample()
 
 }
 
+# Function for computing volume of SC in same range for every subjects, i.e., from caudal edge of C3 + 90 slices
+volume_sc_C3()
+{
+	cd $DATA_DIR/resampled_masks/
+
+	output_file="${DATA_DIR}/resampled_masks/T2SAG_resampled_SC_volume_from_caudal_edge_of_C3+90_slices_SCT_v${SCT_VER}_$(date +%F)"
+
+	while read line; do
+
+		SUB=$(echo $line | awk '{print $1}')				# get subID
+
+		LOW_LIM=$(echo $line | awk '{print $2}')		# fetch number of slice corresponding with caudal edge of C3 segment
+		UP_LIM=$(($LOW_LIM + 90))										# compute upper end of ROI
+
+		$PATH_SCT/sct_extract_metric -i $DATA_DIR/resampled_masks/$SUB/sid-0001-00001-000001.nii -f $DATA_DIR/resampled_masks/$SUB/sid-0001-00001-000001_seg.nii -method bin -z $LOW_LIM:$UP_LIM -o ${output_file}.csv -append 1
+		if [[ $(echo $?) == 1 ]];then "echo $subID" >> ${output_file}_error_log.txt;fi
+
+	done < ~/Dropbox/DCM_shared_folder/Spektroskopie/Atrophy_spectroscopy_C3_caudal_edge.txt
+
+
+}
+
+
 # Function for comptuting volume of SC in range of spectroscopic voxel
+# OBSOLETE - spectroscopic voxel is not at same position (do not cover same area) for all subejcts - NOT USED
 volume_sc_spectro_voxel()
 {
 	cd $DATA_DIR/resampled_masks/$SUB
