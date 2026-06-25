@@ -10,9 +10,11 @@
 #   4. disc labels + registration to the PAM50 template, used by
 #      the anatomical overlap below.
 #
-# Per subject, two voxel-overlap metrics between ses-1 and ses-2 (Dice):
-#   dice_native : ses-2 is rigidly registered to ses-1 (removes patient repositioning only)
-#   dice_pam50 : both voxels are warped to the PAM50 template using sct_register_to_template
+# Per subject, three voxel-overlap metrics between ses-1 and ses-2 (Dice):
+#   dice_native     : ses-2 is rigidly registered to ses-1 (removes patient repositioning only)
+#   dice_pam50      : both voxels are warped to the PAM50 template (sct_register_to_template)
+#   dice_straighten : ses-2 registered to ses-1 by matching discs, in native space
+#                     (sct_straighten_spinalcord -dest; no template S-I scaling; context: https://github.com/neuropoly/idea-projects/issues/17#issuecomment-1584916867)
 #
 # Run inside the SCT environment:
 #   source ${SCT_DIR}/python/etc/profile.d/conda.sh && conda activate venv_sct
@@ -76,7 +78,7 @@ process_session() {
     fi
 }
 
-# Voxel overlap between ses-1 and ses-2: rigid (physical) and PAM50 (anatomical)
+# Voxel overlap between ses-1 and ses-2: for different methods
 compute_overlap() {
     local sub="$1"
     local dir_ses1="$OUTPUT_DIR/$sub/ses-1"
@@ -92,6 +94,13 @@ compute_overlap() {
         -param step=1,type=seg,algo=centermassrot:step=2,type=im,algo=rigid \
         -owarp "$odir/warp_ses2_to_ses1.nii.gz" -ofolder "$odir" -x linear \
         -qc "$QC" -qc-subject "${sub}_overlap"
+
+    # Disc-based alignment of ses-2 to ses-1
+    # Context: https://github.com/neuropoly/idea-projects/issues/17#issuecomment-1584916867
+    local disc_ses1="$dir_ses1/${sub}_ses-1_T2w_seg_labeled_discs.nii.gz"
+    local disc_ses2="$dir_ses2/${sub}_ses-2_T2w_seg_labeled_discs.nii.gz"
+    sct_straighten_spinalcord -i "$t2_ses2" -s "$seg_ses2" -dest "$seg_ses1" \
+        -ldisc-input "$disc_ses2" -ldisc-dest "$disc_ses1" -ofolder "$odir/align_ses2_to_ses1"
 
     for acq in $MRS_ACQ; do
 
@@ -109,7 +118,16 @@ compute_overlap() {
             -x nn -o "$odir/${acq}_voxel_ses2_in_pam50.nii.gz"
         local dice_pam50; dice_pam50=$(dice "$odir/${acq}_voxel_ses1_in_pam50.nii.gz" "$odir/${acq}_voxel_ses2_in_pam50.nii.gz")
 
-        echo "$sub,$acq,$dice_native,$dice_pam50" >> "$OVERLAP_CSV"
+        # 3. Disc-based alignment: warp ses-2 voxel into ses-1 space with the single warp
+        # from the registration above
+        sct_apply_transfo -i "$dir_ses2/${acq}_voxel.nii.gz" -d "$t2_ses1" \
+            -w "$odir/align_ses2_to_ses1/warp_curve2straight.nii.gz" \
+            -x nn -o "$odir/${acq}_voxel_ses2_in_ses1_disc.nii.gz"
+        # QC: ses-2 voxel disc-aligned to ses-1, overlaid on the T2 of ses-1
+        sct_qc -i "$t2_ses1" -s "$seg_ses1" -d "$odir/${acq}_voxel_ses2_in_ses1_disc.nii.gz" -p sct_deepseg_lesion -plane sagittal -qc "$QC" -qc-subject "${sub}_overlap-disc_${acq}"
+        local dice_straighten; dice_straighten=$(dice "$dir_ses1/${acq}_voxel.nii.gz" "$odir/${acq}_voxel_ses2_in_ses1_disc.nii.gz")
+
+        echo "$sub,$acq,$dice_native,$dice_pam50,$dice_straighten" >> "$OVERLAP_CSV"
     done
 }
 
@@ -117,7 +135,7 @@ compute_overlap() {
 main() {
     mkdir -p "$OUTPUT_DIR"
     echo "subject,session,mrs_type,voxel_volume_mm3,cord_fraction,csf_fraction,cord_volume_mm3,csf_volume_mm3" > "$CSF_CSV"
-    echo "subject,mrs_type,dice_native,dice_pam50" > "$OVERLAP_CSV"
+    echo "subject,mrs_type,dice_native,dice_pam50,dice_straighten" > "$OVERLAP_CSV"
 
     for sub_dir in "$BIDS_ROOT"/sub-*; do
         local sub; sub=$(basename "$sub_dir")
