@@ -40,8 +40,7 @@ For each subject / session:
 2. SCT segments the **spinal cord** (`sct_deepseg spinalcord`). Known issue: the MRS voxel goes above the cord segmentation ([#1](https://github.com/valosekj/spectroscopy_DCM/issues/1))
 3. The voxel is masked by the cord (`sct_maths`, `fslstats`) → **cord (tissue)
    fraction** and **CSF fraction**, where CSF = everything inside the voxel that is
-   not cord. Matches the earlier DCM spectroscopy method (`DCM_spectro_pipeline.sh`,
-   Horák et al.).
+   not cord. 
 
 ### b) Voxel overlap between visits (ses-1 vs ses-2)
 Three Dice-like metrics are explored:
