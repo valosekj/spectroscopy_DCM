@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Step 1/2 -- Convert the raw MRS DICOMs to a BIDS-like dataset.
+# Convert the raw MRS DICOMs to a BIDS-like dataset.
 #
 # Input layout (one scan folder per session):
 #   <dicom_root>/sub-XX/ses-Y/<scanID>/

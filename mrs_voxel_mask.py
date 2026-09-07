@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Create a binary mask of the single MRS voxel on the anatomical T2 grid.
+Create a binary mask of the single MRS voxel in the anatomical T2 space.
 
 Usage:
     mrs_voxel_mask.py <nifti_mrs.nii.gz> <ref_t2.nii.gz> <out_mask.nii.gz>

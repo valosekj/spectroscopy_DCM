@@ -1,6 +1,6 @@
 # spectroscopy_DCM
 
-Tools for analysing single-voxel MR spectroscopy (MRS) of the spinal cord.
+Tools for analyzing single-voxel MR spectroscopy (MRS) of the spinal cord.
 
 The workflow is two steps: **(1)** convert the raw DICOMs to a BIDS NIfTI dataset,
 then **(2)** run the analysis on that dataset.
@@ -15,6 +15,11 @@ Converts the raw MRS DICOM tree to a BIDS-like NIfTI dataset:
 ```bash
 ./01_dcm2bids.sh <dicom_root> <bids_root>
 ```
+
+Requirements:
+
+- `dcm2niix` (for the T2 DICOMs)
+- `spec2nii` (for the MRS DICOMs)
 
 Expected input layout:
 ```
@@ -31,19 +36,18 @@ Two things:
 
 ### a) CSF fraction inside the MRS voxel
 For each subject / session:
-1. `mrs_voxel_mask.py` drops the MRS voxel onto the T2 grid → a binary **voxel mask**
-   (the only step the CLI tools can't do — FSL can't read the complex NIfTI-MRS).
-2. SCT segments the **spinal cord** (`sct_deepseg spinalcord`).
+1. `mrs_voxel_mask.py` creates a binary mask of the single MRS voxel in the anatomical T2w space.
+2. SCT segments the **spinal cord** (`sct_deepseg spinalcord`). Known issue: the MRS voxel goes above the cord segmentation ([#1](https://github.com/valosekj/spectroscopy_DCM/issues/1))
 3. The voxel is masked by the cord (`sct_maths`, `fslstats`) → **cord (tissue)
    fraction** and **CSF fraction**, where CSF = everything inside the voxel that is
    not cord. Matches the earlier DCM spectroscopy method (`DCM_spectro_pipeline.sh`,
    Horák et al.).
 
 ### b) Voxel overlap between visits (ses-1 vs ses-2)
-Three Dice metrics, reported side by side for comparison:
+Three Dice-like metrics are explored:
 - **`dice_native`** — ses-2 is **rigidly** registered to ses-1
-  (`sct_register_multimodal`, cord-seg initialised), removing only patient
-  repositioning. Answers *“how reproducibly was the physical voxel re-placed?”*
+  (`sct_register_multimodal`, cord-seg used for initialization), removing only patient
+  repositioning.
 - **`dice_pam50`** — both voxels are warped to the **PAM50 template** via disc-based
   template registration (`sct_label_vertebrae` → `sct_register_to_template`).
 - **`dice_straighten`** — ses-2 is registered to ses-1 by **matching the discs in

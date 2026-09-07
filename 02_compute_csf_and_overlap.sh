@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# Step 2/2 -- CSF fraction inside the MRS voxel + overlap of the voxel between visits.
-# Operates on the BIDS dataset produced by 01_dcm2bids.sh.
+# Compute CSF fraction inside the MRS voxel + overlap of the voxel between visits.
+# Expects the BIDS dataset produced by 01_dcm2bids.sh.
 #
 # Per subject / session:
-#   1. mrs_voxel_mask.py places each MRS voxel onto the T2 grid (voxel mask),
+#   1. mrs_voxel_mask.py places each MRS voxel in the T2 space,
 #   2. sct_deepseg segments the spinal cord,
 #   3. the voxel is masked by the cord --> two fractions: cord and CSF,
 #   4. disc labels + registration to the PAM50 template, used by
