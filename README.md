@@ -70,6 +70,7 @@ source ${SCT_DIR}/python/etc/profile.d/conda.sh && conda activate venv_sct
 - Per subject/session: voxel masks, segmentations, warps.
 
 ## Requirements
-- **SCT** (Spinal Cord Toolbox) — `sct_*`, plus `python` with `nibabel`/`numpy`.
-- **FSL** — provides `dcm2niix`, `spec2nii`, `fslstats`
+- `dcm2niix`, `spec2nii` — for DICOM to BIDS conversion.
+- **SCT** (Spinal Cord Toolbox) — `sct_*`, plus `python` `conda` environment with `nibabel`/`numpy`.
+- **FSL** — `fslstats`
   (auto-detected via `FSLDIR`, default `/Users/valosek/code/fsl_6.0.6.2`).
